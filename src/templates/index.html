@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FaceProof | Social Verification</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <a class="brand" href="/">Face<span>Proof</span></a>
+      <span class="network"><i></i> Ethereum Sepolia</span>
+    </header>
+
+    <section class="hero">
+      <div>
+        <p class="eyebrow">VERIFIABLE SOCIAL IMAGE SEARCH</p>
+        <h1>Find it. Prove it.<br><em>Keep it verifiable.</em></h1>
+        <p>Upload a face image. FaceProof searches public social posts, compares the image and face, then records only verified matches on Sepolia.</p>
+      </div>
+      <ol class="flow" aria-label="Verification flow">
+        <li><b>01</b><span>Face scan</span></li>
+        <li><b>02</b><span>Social search</span></li>
+        <li><b>03</b><span>On-chain proof</span></li>
+      </ol>
+    </section>
+
+    <section class="panel upload-panel">
+      <div class="panel-heading"><div><p class="kicker">NEW VERIFICATION</p><h2>Start with an image</h2></div><span class="privacy">Only verified fingerprints go on-chain</span></div>
+      <form id="verify-form" action="/verify" method="post" enctype="multipart/form-data">
+        <label class="upload-field" for="image">
+          <span class="upload-icon">↑</span><span><b>Choose a face image</b><small>JPG, PNG or WEBP · up to 10 MB</small></span>
+          <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.webp" required>
+        </label>
+        <label class="select-field">Search mode
+          <select name="search_type">
+            <option value="visual_matches" selected>Visual matches (recommended)</option>
+            <option value="exact_matches">Exact matches only</option>
+          </select>
+        </label>
+        <button id="verify-button" type="submit">Run verification <span>→</span></button>
+      </form>
+      <p class="note">The workflow checks the same image—not merely the same person. Searches may take up to two minutes.</p>
+    </section>
+
+    {% if error %}
+      <section class="panel error-panel">
+        <h2>Verification stopped safely</h2>
+        <p>{{ error }}</p>
+        {% if input_url %}<img class="input-preview" src="{{ input_url }}" alt="Uploaded image">{% endif %}
+      </section>
+    {% endif %}
+
+    {% if result and result.outcome == "verified" %}
+      <section class="status success"><span>✓</span><div><b>Verified on Sepolia</b><small>{{ "A new tamper-evident record was created." if result.registration_status == "registered" else "An existing tamper-evident record was confirmed." }}</small></div></section>
+      <section class="cards image-cards">
+        <article class="panel image-card"><h2>Input image</h2><img src="{{ result.input_url }}" alt="Uploaded input"></article>
+        <article class="panel image-card"><h2>Matched social image</h2><img src="{{ result.artifact_url }}" alt="Discovered social match"></article>
+      </section>
+
+      <section class="cards metrics">
+        <article class="panel"><span>Faces detected</span><strong>{{ result.face_count }}</strong><small>Input image</small></article>
+        <article class="panel"><span>Lens results scanned</span><strong>{{ result.result_count }}</strong><small>Live search results</small></article>
+        <article class="panel"><span>Face distance</span><strong>{{ '%.4f'|format(result.face_distance) }}</strong><small>Passes below 0.6000</small></article>
+        <article class="panel"><span>Image similarity</span><strong>{{ '%.3f'|format(result.image_match.crop_similarity) }}</strong><small>Exact image or repost</small></article>
+      </section>
+
+      <section class="panel details">
+        <h2>Discovered social post</h2>
+        <p class="title">{{ result.candidate.title or 'Untitled result' }}</p>
+        <a href="{{ result.candidate.link }}" target="_blank" rel="noreferrer">Open matching post ↗</a>
+        <dl>
+          <div><dt>SHA-256 fingerprint</dt><dd>{{ result.digest }}</dd></div>
+          <div><dt>On-chain source</dt><dd><a href="{{ result.on_chain.source_url }}" target="_blank" rel="noreferrer">{{ result.on_chain.source_url }}</a></dd></div>
+          <div><dt>Submitter wallet</dt><dd>{{ result.on_chain.submitter }}</dd></div>
+          <div><dt>Blockchain</dt><dd>Ethereum Sepolia · Chain ID 11155111</dd></div>
+        </dl>
+        {% if result.explorer_url %}<a class="tx" href="{{ result.explorer_url }}" target="_blank" rel="noreferrer">View transaction on Etherscan ↗</a>{% endif %}
+      </section>
+
+      <section class="panel tamper">
+        <h2>Tamper check</h2>
+        <p>{{ "A one-byte change produced a different hash: tampering detected." if result.tamper.detected else "Tamper check did not produce a different hash." }}</p>
+        <code>{{ result.tamper.tampered_hash }}</code>
+      </section>
+    {% endif %}
+
+    {% if result and result.outcome != "verified" %}
+      <section class="panel outcome-panel">
+        <h2>{{ "Same person, different image" if result.outcome == "same_person_different_image" else "No verified social match" }}</h2>
+        <p>{{ result.message }}</p>
+        <p><strong>{{ result.result_count }}</strong> Google Lens records scanned · <strong>{{ result.face_count }}</strong> face(s) detected</p>
+      </section>
+      {% if result.candidate %}
+        <section class="cards image-cards">
+          <article class="panel image-card"><h2>Input image</h2><img src="{{ result.input_url }}" alt="Uploaded input"></article>
+          <article class="panel image-card"><h2>Best social result</h2><img src="{{ result.artifact_url }}" alt="Best social result"></article>
+        </section>
+        <section class="panel details">
+          <h2>Best evidence found</h2>
+          <p class="title">{{ result.candidate.title or 'Untitled result' }}</p>
+          <a href="{{ result.candidate.link }}" target="_blank" rel="noreferrer">Open discovered social post ↗</a>
+          <dl>
+            <div><dt>Face distance</dt><dd>{{ '%.4f'|format(result.face_distance) }} · Same-person threshold: below 0.6000</dd></div>
+            <div><dt>Image crop similarity</dt><dd>{{ '%.3f'|format(result.image_match.crop_similarity) }} · Exact/repost threshold: 0.820 or above</dd></div>
+            <div><dt>Blockchain action</dt><dd>Not recorded, because this was not the same image or repost.</dd></div>
+          </dl>
+        </section>
+      {% endif %}
+    {% endif %}
+  </main>
+  <script>
+    document.getElementById("verify-form")?.addEventListener("submit", () => {
+      const button = document.getElementById("verify-button");
+      button.disabled = true;
+      button.textContent = "Searching Google Lens and verifying candidates...";
+    });
+  </script>
+</body>
+</html>

@@ -30,7 +30,7 @@
       <div class="panel-heading"><div><p class="kicker">NEW VERIFICATION</p><h2>Start with an image</h2></div><span class="privacy">Only verified fingerprints go on-chain</span></div>
       <form id="verify-form" action="/verify" method="post" enctype="multipart/form-data">
         <label class="upload-field" for="image">
-          <span class="upload-icon">↑</span><span><b>Choose a face image</b><small>JPG, PNG or WEBP · up to 10 MB</small></span>
+          <span class="upload-icon">↑</span><span><b id="file-name">Choose a face image</b><small id="file-hint">JPG, PNG or WEBP · up to 10 MB</small></span>
           <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.webp" required>
         </label>
         <label class="select-field">Search mode
@@ -111,6 +111,20 @@
     {% endif %}
   </main>
   <script>
+    document.getElementById("image")?.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      const name = document.getElementById("file-name");
+      const hint = document.getElementById("file-hint");
+
+      if (file) {
+        name.textContent = file.name;
+        hint.textContent = "Selected and ready to verify";
+      } else {
+        name.textContent = "Choose a face image";
+        hint.textContent = "JPG, PNG or WEBP · up to 10 MB";
+      }
+    });
+
     document.getElementById("verify-form")?.addEventListener("submit", () => {
       const button = document.getElementById("verify-button");
       button.disabled = true;

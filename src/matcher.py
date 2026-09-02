@@ -6,10 +6,13 @@ SOCIAL_DOMAINS = (
     "facebook.com",
     "x.com",
     "twitter.com",
+    "threads.net",
     "tiktok.com",
-    "youtube.com",
-    "linkedin.com",
     "reddit.com",
+    "linkedin.com",
+    "pinterest.com",
+    "tumblr.com",
+    "bsky.app",
 )
 
 

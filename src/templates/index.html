@@ -42,6 +42,7 @@
         <button id="verify-button" type="submit">Run verification <span>→</span></button>
       </form>
       <p class="note">The workflow checks the same image—not merely the same person. Searches may take up to two minutes.</p>
+      <p class="note"><strong>Privacy notice:</strong> Upload only images you are authorised to process. FaceProof compares images for demonstration purposes and does not perform identity verification. Only a verified artifact fingerprint and its public source URL may be recorded on Ethereum Sepolia.</p>
     </section>
 
     {% if error %}
@@ -90,6 +91,7 @@
       <section class="panel outcome-panel">
         <h2>{{ "Same person, different image" if result.outcome == "same_person_different_image" else "No verified social match" }}</h2>
         <p>{{ result.message }}</p>
+        <p class="note"><strong>What this means:</strong> No verified public social-image match was found. This does not determine identity or indicate that the person has no online presence. Results depend on public indexing, image availability, platform access, and image similarity. No blockchain record was created.</p>
         <p><strong>{{ result.result_count }}</strong> Google Lens records scanned · <strong>{{ result.face_count }}</strong> face(s) detected</p>
       </section>
       {% if result.candidate %}
@@ -108,6 +110,27 @@
           </dl>
         </section>
       {% endif %}
+
+      <section class="panel details diagnostics">
+        <h2>Search details</h2>
+        <p><strong>{{ result.search_summary.social_candidates }}</strong> supported social result(s) found from <strong>{{ result.search_summary.lens_results }}</strong> Lens record(s). FaceProof checked <strong>{{ result.search_summary.candidates_checked }}</strong> candidate(s), up to {{ result.search_summary.candidate_limit }}.</p>
+        {% if result.evaluated_candidates %}
+          <details>
+            <summary>Why the checked candidates did not verify</summary>
+            <ol class="diagnostic-list">
+              {% for item in result.evaluated_candidates %}
+                <li>
+                  <a href="{{ item.candidate.link }}" target="_blank" rel="noreferrer">{{ item.candidate.title or item.candidate.link }}</a>
+                  <span>{{ item.reason }}</span>
+                  {% if item.face_distance is defined and item.face_distance is not none %}<small>Face distance: {{ '%.4f'|format(item.face_distance) }} · Image similarity: {{ '%.3f'|format(item.image_match.crop_similarity) }}</small>{% endif %}
+                </li>
+              {% endfor %}
+            </ol>
+          </details>
+        {% else %}
+          <p>No supported social-media result was available for direct inspection. Results from other websites are intentionally not treated as social-post evidence.</p>
+        {% endif %}
+      </section>
     {% endif %}
   </main>
   <script>

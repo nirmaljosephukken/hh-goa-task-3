@@ -31,6 +31,8 @@ def test_social_candidates_rejects_non_social_results():
 
 def test_social_url_requires_an_actual_social_domain():
     assert is_social_url("https://instagram.com/p/matching-post/")
-    assert is_social_url("https://m.youtube.com/watch?v=example")
+    assert is_social_url("https://www.threads.net/@example/post/example")
+    assert is_social_url("https://www.pinterest.com/pin/example/")
+    assert not is_social_url("https://m.youtube.com/watch?v=example")
     assert not is_social_url("https://notinstagram.com/p/matching-post/")
     assert not is_social_url("https://instagram.com.example.com/p/matching-post/")

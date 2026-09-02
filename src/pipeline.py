@@ -64,12 +64,19 @@ def run_pipeline(
         for key in ("exact_matches", "visual_matches", "organic_results")
     )
     candidates = social_candidates(payload)
+    search_summary = {
+        "lens_results": result_count,
+        "social_candidates": len(candidates),
+        "candidates_checked": 0,
+        "candidate_limit": MAX_CANDIDATES_TO_CHECK,
+    }
     if not candidates:
         return {
             "outcome": "no_social_result",
             "face_count": len(face_result.encodings),
             "search_type": search_type,
             "result_count": result_count,
+            "search_summary": search_summary,
             "message": "Google Lens returned no supported social-media result for this image.",
             "evaluated_candidates": [],
         }
@@ -81,32 +88,68 @@ def run_pipeline(
     for index, item in enumerate(candidates[:MAX_CANDIDATES_TO_CHECK], start=1):
         candidate_image = item.get("image") or item.get("thumbnail")
         candidate_path = output_dir / f"social_candidate_{index}.jpg"
-        if not candidate_image or not download_image(
-            candidate_image, candidate_path, timeout=12
-        ):
+        evaluated = {"candidate": item, "candidate_path": candidate_path}
+
+        if not candidate_image:
+            evaluated.update(
+                status="skipped",
+                reason="Google Lens did not provide an image or thumbnail to inspect.",
+            )
+            evaluated_candidates.append(evaluated)
+            continue
+
+        if not download_image(candidate_image, candidate_path, timeout=12):
+            evaluated.update(
+                status="skipped",
+                reason="The result image could not be downloaded for verification.",
+            )
+            evaluated_candidates.append(evaluated)
             continue
 
         image_match = compare_images(input_path, candidate_path)
         face_match, face_distance = compare_faces(face_result.encodings[0], candidate_path)
-        evaluated = {
-            "candidate": item,
-            "candidate_path": candidate_path,
-            "image_match": image_match,
-            "face_distance": face_distance,
-            "face_match": face_match,
-        }
-        evaluated_candidates.append(evaluated)
+        evaluated.update(
+            image_match=image_match,
+            face_distance=face_distance,
+            face_match=face_match,
+        )
 
-        if image_match.matches and face_match and face_distance is not None:
+        if not image_match.matches and not face_match:
+            evaluated.update(
+                status="rejected",
+                reason="It did not match the uploaded image and its face did not pass verification.",
+            )
+        elif not image_match.matches:
+            evaluated.update(
+                status="rejected",
+                reason="The same person may appear, but this is not the same image or a qualifying repost/crop.",
+            )
+        elif face_distance is None:
+            evaluated.update(
+                status="rejected",
+                reason="The image matched visually, but no face could be detected in the candidate.",
+            )
+        elif not face_match:
+            evaluated.update(
+                status="rejected",
+                reason="The image matched visually, but the candidate face was outside the verification threshold.",
+            )
+        else:
+            evaluated.update(status="verified", reason="Same-image and face checks passed.")
             shutil.copyfile(candidate_path, artifact_path)
             selected = {**evaluated, "artifact_path": artifact_path}
+
+        evaluated_candidates.append(evaluated)
+        if selected:
             break
+
+    search_summary["candidates_checked"] = len(evaluated_candidates)
 
     if not selected:
         face_candidates = [
             item
             for item in evaluated_candidates
-            if item["face_match"] and item["face_distance"] is not None
+            if item.get("face_match") and item.get("face_distance") is not None
         ]
         if face_candidates:
             best = max(
@@ -118,6 +161,7 @@ def run_pipeline(
                 "face_count": len(face_result.encodings),
                 "search_type": search_type,
                 "result_count": result_count,
+                "search_summary": search_summary,
                 "message": (
                     "A social post with the same person was found, but it is a different "
                     "image. No blockchain record was created."
@@ -134,6 +178,7 @@ def run_pipeline(
             "face_count": len(face_result.encodings),
             "search_type": search_type,
             "result_count": result_count,
+            "search_summary": search_summary,
             "message": (
                 "Social-media results were found, but none provided a downloadable "
                 "face-verified match. No blockchain record was created."
@@ -177,6 +222,7 @@ def run_pipeline(
         "face_count": len(face_result.encodings),
         "search_type": search_type,
         "result_count": result_count,
+        "search_summary": search_summary,
         "candidate": selected["candidate"],
         "artifact_path": selected["artifact_path"],
         "image_match": selected["image_match"],
@@ -194,4 +240,5 @@ def run_pipeline(
             "submitter": submitter,
         },
         "tamper": tamper,
+        "evaluated_candidates": evaluated_candidates,
     }

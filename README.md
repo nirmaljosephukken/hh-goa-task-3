@@ -57,7 +57,7 @@ Choose either of these Google Lens modes:
 - **Visual matches** — recommended in the web interface; useful for resized or visually similar reposts.
 - **Exact matches** — limits the Lens search request to exact-match results.
 
-The result page shows the input and selected social image (when available), face count, Lens result count, face distance, image crop similarity, SHA-256 fingerprint, Sepolia status, and an Etherscan transaction link for a new registration. The web interface always runs the tamper check. Uploaded and downloaded files are placed in a unique `data/runs/<run-id>/` directory.
+The result page shows the input and selected social image (when available), face count, Lens result count, face distance, image crop similarity, SHA-256 fingerprint, Sepolia status, and a direct Etherscan transaction link. A newly registered match links to the transaction just submitted; an existing match links to its original `RecordRegistered` transaction. The web interface always runs the tamper check. Uploaded and downloaded files are placed in a unique `data/runs/<run-id>/` directory.
 
 ### Command-line interface
 

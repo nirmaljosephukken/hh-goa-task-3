@@ -75,9 +75,9 @@
           <div><dt>SHA-256 fingerprint</dt><dd>{{ result.digest }}</dd></div>
           <div><dt>On-chain source</dt><dd><a href="{{ result.on_chain.source_url }}" target="_blank" rel="noreferrer">{{ result.on_chain.source_url }}</a></dd></div>
           <div><dt>Submitter wallet</dt><dd>{{ result.on_chain.submitter }}</dd></div>
-          <div><dt>Blockchain</dt><dd>Ethereum Sepolia · Chain ID 11155111</dd></div>
+          <div><dt>Blockchain</dt><dd><a href="{{ result.on_chain.contract_explorer_url }}" target="_blank" rel="noreferrer">Ethereum Sepolia · Chain ID 11155111 · Open contract ↗</a></dd></div>
         </dl>
-        {% if result.explorer_url %}<a class="tx" href="{{ result.explorer_url }}" target="_blank" rel="noreferrer">View transaction on Etherscan ↗</a>{% endif %}
+        {% if result.explorer_url %}<a class="tx" href="{{ result.explorer_url }}" target="_blank" rel="noreferrer">View {{ "original" if result.registration_status == "already_registered" else "new" }} transaction on Etherscan ↗</a>{% endif %}
       </section>
 
       <section class="panel tamper">

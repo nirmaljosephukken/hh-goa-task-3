@@ -24,6 +24,22 @@ class PipelineError(RuntimeError):
 
 
 MAX_CANDIDATES_TO_CHECK = 12
+RECORD_REGISTERED_EVENT = "RecordRegistered(bytes32,string,uint256,address)"
+
+
+def _registration_transaction_hash(w3, contract_address: str, digest: str) -> str | None:
+    """Find the transaction that emitted the registration event for a hash."""
+    latest_block = w3.eth.block_number
+    event_topic = "0x" + w3.keccak(text=RECORD_REGISTERED_EVENT).hex()
+    logs = w3.eth.get_logs(
+        {
+            "address": contract_address,
+            "fromBlock": max(0, latest_block - 9999),
+            "toBlock": latest_block,
+            "topics": [event_topic, "0x" + digest],
+        }
+    )
+    return logs[-1]["transactionHash"].hex() if logs else None
 
 
 def run_pipeline(
@@ -202,6 +218,9 @@ def run_pipeline(
         exists, registered_url, timestamp, submitter = contract.functions.verify(
             bytes.fromhex(digest)
         ).call()
+    else:
+        report("Finding the original Sepolia registration transaction")
+        tx_hash = _registration_transaction_hash(w3, contract_address, digest)
 
     tamper = None
     if tamper_test:
@@ -238,6 +257,11 @@ def run_pipeline(
             "source_url": registered_url,
             "timestamp": timestamp,
             "submitter": submitter,
+            "contract_address": contract_address,
+            "contract_explorer_url": (
+                "https://sepolia.etherscan.io/address/"
+                f"{contract_address}#events"
+            ),
         },
         "tamper": tamper,
         "evaluated_candidates": evaluated_candidates,
